@@ -1,0 +1,17 @@
+{
+    "name": "hubleto/pay-by-square-encoder",
+    "license": "MIT",
+    "description": "Encoder for Pay By Square",
+    "homepage": "https://www.hubleto.com",
+    "support": {
+        "issues": "https://github.com/hubleto/pay-by-square-encoer/issues",
+        "source": "https://github.com/hubleto/pay-by-square-encoer"
+    },
+    "keywords": ["hubleto", "crm", "erp", "application", "hub"],
+    "autoload": {
+        "psr-4": {
+            "Hubleto\\Utilities\\": "src"
+        }
+    },
+    "minimum-stability": "dev"
+}
