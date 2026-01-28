@@ -4,22 +4,26 @@ namespace Hubleto\Utilities;
 
 class PayBySquareEncoder
 {
-  private float $amount = 0.00;
+  private float $amount = 0.01;
   private string $currency = "EUR";
   private string $paymentDate;
-  private string $vs;
-  private string $cs;
-  private string $ss;
-  private string $paymentRef;
-  private string $note;
-  private string $iban;
-  private string $bic;
-  private string $beneficiaryName;
-  private string $beneficiaryAddress1;
-  private string $beneficiaryAddress2;
+  private string $vs = "";
+  private string $cs = "";
+  private string $ss = "";
+  private string $paymentRef = "";
+  private string $note = "";
+  private string $iban = "";
+  private string $bic = "";
+  private string $beneficiaryName = "";
+  private string $beneficiaryAddress1 = "";
+  private string $beneficiaryAddress2 = "";
 
-  private string $xzPath;
+  private ?string $xzPath = null;
 
+  public function __construct()
+  {
+    $this->paymentDate = (new \DateTime())->format("Ymd");
+  }
 
   public function setAmount(float $amount): self
   {
@@ -109,22 +113,22 @@ class PayBySquareEncoder
   {
     $subValues = [
       "1",
-      $this->amount ?? 0.01,
-      $this->currency ?? "EUR",
-      $this->paymentDate ?? (new \DateTime())->format("Ymd"),
-      $this->vs ?? "",
-      $this->cs ?? "",
-      $this->ss ?? "",
-      $this->paymentRef ?? "",
-      $this->note ?? "",
+      $this->amount,
+      $this->currency,
+      $this->paymentDate,
+      $this->vs,
+      $this->cs,
+      $this->ss,
+      $this->paymentRef,
+      $this->note,
       "1",
-      $this->iban ?? "",
-      $this->bic ?? "",
+      $this->iban,
+      $this->bic,
       "0",
       "0",
-      $this->beneficiaryName ?? "",
-      $this->beneficiaryAddress1 ?? "",
-      $this->beneficiaryAddress2 ?? ""
+      $this->beneficiaryName,
+      $this->beneficiaryAddress1,
+      $this->beneficiaryAddress2,
     ];
 
     $values = [
@@ -138,6 +142,18 @@ class PayBySquareEncoder
 
   public function getEncodedString(): string
   {
+    if ($this->xzPath === null) {
+      throw new \RuntimeException(
+        "xzPath not provided"
+      );
+    }
+
+    if (!is_executable($this->xzPath)) {
+      throw new \RuntimeException(
+        "xz binary is not executable or not found at path: {$this->xzPath}"
+      );
+    }
+
     // get raw data
     $rawData = $this->getRawData();
 
@@ -145,13 +161,11 @@ class PayBySquareEncoder
     $payload = strrev(hash("crc32b", $rawData, TRUE)) . $rawData;
 
     // compress payload with LZMA
-
-    $cmd = 
+    $cmd =
       $this->xzPath
-      . " --format=raw --lzma1=lc=3,lp=0,pb=2,dict=128KiB -c -"
-    ;
+      . " --format=raw --lzma1=lc=3,lp=0,pb=2,dict=128KiB -c -";
 
-    $descriptors = [ ["pipe", "r"], ["pipe", "w"], ["pipe", "w"] ];
+    $descriptors = [["pipe", "r"], ["pipe", "w"], ["pipe", "w"]];
     $proc = proc_open($cmd, $descriptors, $pipes);
     fwrite($pipes[0], $payload);
     fclose($pipes[0]);
@@ -164,7 +178,7 @@ class PayBySquareEncoder
     $exitCode = proc_close($proc);
 
     if ($exitCode != 0) {
-      throw new \Exception("XZ in PayBySquareEncoded exited with exit code {$exitCode}");
+      throw new \RuntimeException("XZ in PayBySquareEncoded exited with exit code {$exitCode}");
     }
 
     // encode to hex
